@@ -393,3 +393,196 @@ function drawBitmoji(args) {
  *
  *
  */
+
+
+/**************************
+START AUSTIN BITMOJI CODE
+**************************/
+
+//instantiates the bitmoji object type
+var bitmoji = function(x,y,h,clothesColorL,clothesColorD,initials){ 
+    this.x = x;
+    this.y = y;
+    this.h = h;
+    this.clothesColorL = clothesColorL;
+    this.clothesColorD = clothesColorD;
+    this.initials = initials;
+};
+
+//functions that break up the drawing of the bitmoji
+var drawMouth = function(X,Y,H,p){
+    //lips
+    fill(219,143,130);        //lip color
+    arc(X+90/p,Y+113/p,24/p,13/p,0,180);  //lowerlip
+    arc(X+85/p,Y+114/p,15/p,6/p,180,360); //upperlip left
+    arc(X+95/p,Y+114/p,14/p,4/p,180,360); //upperlip right
+    //smile                   //smile color
+    stroke(173,112,101);
+    strokeWeight(1/p);
+    noFill();
+    beginShape();             //smile start
+    curveVertex(X+152/p,Y+64/p);
+    curveVertex(X+104/p,Y+113/p);
+    curveVertex(X+75/p,Y+112/p);
+    curveVertex(X+118/p,Y+122/p);
+    endShape();               //smile end
+    noStroke();
+};
+var drawEye = function(X,Y,eyeX,eyeY,eyeW,eyeH,H,p){
+    //eyeW = 15
+    //eyeH = 7
+    //right eye 
+    //sclera
+    fill(255, 255, 255);   //white
+    ellipse(X+eyeX/p,Y+eyeY/p,eyeW/p,eyeH/p);
+    //iris
+    fill(100,68,12);       //dark brown
+    ellipse(X+eyeX/p,Y+eyeY/p,6/p,8/p);
+    //eyelids
+    noFill();
+    strokeWeight(4/p);
+    stroke(249,203,156);  //skin tone light
+    arc(X+eyeX/p,Y+eyeY/p,eyeW/p,9/p,0,360);
+    noStroke();
+};
+var drawFace = function(X,Y,H,p){
+    fill(249,203,156);  //skin tone light
+    
+    ellipse(X+85/p,Y+115/p,40/p,40/p); //chin
+    
+    quad( //left jaw   
+        X+72/p,Y+130/p,  
+        X+80/p,Y+122/p,  
+        X+60/p,Y+103/p,  
+        X+51/p,Y+111/p); 
+    quad( //right jaw
+        X+100/p,Y+125/p, 
+        X+118/p,Y+98/p,  
+        X+105/p,Y+90/p,  
+        X+86/p,Y+115/p); 
+
+    quad( //left temple
+        X+52/p,Y+110/p,  
+        X+80/p,Y+108/p,  
+        X+77/p,Y+77/p,   
+        X+45/p,Y+80/p); 
+    quad( //right temple
+        X+118/p,Y+98/p,  
+        X+98/p,Y+98/p,  
+        X+105/p,Y+77/p,   
+        X+120/p,Y+80/p); 
+    
+    ellipse(X+85/p,Y+70/p,75/p,71/p); //forehead
+};
+var drawHair = function(X,Y,hairX,hairY,tone,w,hairH,H,p){
+    if (tone === "dark"){
+    fill(100, 68, 12);     //dark brown
+    }
+    if (tone === "light"){
+    fill(135, 98, 25);  //light brown
+    }
+    noStroke();
+    ellipse(X+hairX/p,Y+hairY/p,w/p,hairH/p);
+};
+
+var drawTorso = function(X,Y,H,p,shirtColor){
+    noStroke();
+    fill(222,179,135);     //skin tone dark
+    rect(X+45/p,Y+110/p,45/p,40/p);
+        //shirt
+    fill(shirtColor);     //green light
+    triangle(X+75/p,Y+150/p,  X+150/p,Y+150/p,  X+102/p,Y+122/p); //right shirt
+    triangle(X+75/p,Y+150/p,  X+0/p,Y+150/p,    X+48/p,Y+122/p); //left shirt
+};
+var drawHead =  function(X,Y,H,p,hatColorL,hatColorD,initials){
+    ///back of rim
+    fill(hatColorD);        //green dark
+    ellipse(X+80/p,Y+70/p,116/p,27/p);
+    
+    //right hair
+    drawHair(X,Y,101,122,"dark",13,20,H,p);
+    drawHair(X,Y,108,114,"dark",15,23,H,p);
+    drawHair(X,Y,115,107,"light",15,23,H,p);
+    drawHair(X,Y,121,103,"dark",13,20,H,p);
+    drawHair(X,Y,125,93,"light",15,23,H,p);
+    drawHair(X,Y,122,85,"dark",13,20,H,p);
+    
+    //skin
+    drawFace(X,Y,H,p);
+    
+    //fedora crown
+    fill(hatColorL);     //medium green
+    quad(X+54/p,Y+23/p,   X+42/p,Y+61/p,   X+125/p,Y+64/p,   X+105/p,Y+23/p);
+    ellipse(X+80/p,Y+30/p,56/p,28/p);
+    
+    drawMouth(X,Y,H,p);
+    
+    //nose
+    fill(222,179,135);             //skin tone dark
+    ellipse(X+92/p,Y+97/p,8/p,7/p);            //left nostril
+    ellipse(X+97/p,Y+98/p,8/p,7/p);            //tip of nose
+    ellipse(X+102/p,Y+97/p,7/p,6/p);           //right nostril
+    quad(X+92/p,Y+97/p,  X+102/p,Y+97/p,  X+98/p,Y+80/p,  X+93/p,Y+80/p);//bridge of nose
+    
+    drawEye(X,Y,77,83,16,8,H,p); //right eye
+    drawEye(X,Y,110,85,15,7,H,p); //left eye
+    
+    //eyebrows
+    fill(100,68,12);           //dark brown
+    arc(X+76/p,Y+74/p,25/p,7/p,180,376);   //left eyebrow
+    //right eyebrow
+    arc(X+111/p,Y+76/p,21/p,6/p,164,360);  //left eyebrow
+    
+    //hairline
+    fill(135, 98, 25);         //light brown
+    ellipse(X+123/p,Y+74/p,12/p,18/p);
+    noFill();
+    strokeWeight(10/p);
+    stroke(135, 98, 25);         //light brown
+    arc(X+85/p,Y+69/p,71/p,16/p,180,360);
+    noStroke();
+    
+    //glasses
+    stroke(0, 0, 0);
+    strokeWeight(0.01*H);
+    line(X+48/p,Y+77/p,X+67/p,Y+80/p);                    //left temple
+    noFill();
+    quad(X+66/p,Y+87/p,  X+87/p,Y+90/p,  X+92/p,Y+78/p,  X+67/p,Y+75/p);  //left rim
+    line(X+90/p,Y+83/p,X+103/p,Y+84/p);                   //bridge
+    quad(X+104/p,Y+91/p, X+121/p,Y+92/p, X+125/p,Y+80/p,  X+100/p,Y+78/p);
+    noStroke();
+    
+    //left hair
+    drawHair(X,Y,40,83,"light",15,21,H,p);
+    drawHair(X,Y,44,80,"dark",13,17,H,p);
+    drawHair(X,Y,49,74,"light",15,20,H,p);
+    drawHair(X,Y,42,93,"dark",15,21,H,p);
+    drawHair(X,Y,48,120,"dark",15,21,H,p);
+    drawHair(X,Y,50,106,"dark",15,21,H,p);
+    drawHair(X,Y,39,99,"light",15,21,H,p);
+    drawHair(X,Y,45,110,"light",15,21,H,p);
+
+    //fedora rim
+    noFill();
+    strokeWeight(5/p);
+    stroke(hatColorD);           //green dark
+    arc(X+84/p,Y+64/p,79/p,13/p,180,360);
+    
+    //initials
+    if(initials){
+        textSize(30/p);
+        fill(255, 255, 255);
+        text("A H",X+56/p,Y+51/p);
+    }
+};
+
+//draw method
+bitmoji.prototype.draw = function() {
+    var p = 136/this.h;  //p = proportion
+    drawTorso(this.x - 88/p,this.y - 97/p,this.h,p,this.clothesColorL);
+    drawHead(this.x - 88/p,this.y - 97/p,this.h,p,this.clothesColorL,this.clothesColorD,this.initials);
+};
+
+/**********************
+END AUSTIN BITMOJI CODE
+***********************/
