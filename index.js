@@ -379,8 +379,7 @@ NathanBitmoji.prototype.draw = function () {
  *
  *
  */
-// var nathan = new NathanBitmoji({ x: 200, y: 200, h: 150, shirt: { color: color(0x4f, 0x5b, 0x67), initials: true } });
-// nathan.draw();
+var nathan = new NathanBitmoji({ x: 323, y: 325, h: 150, shirt: { color: color(0x4f, 0x5b, 0x67), initials: true } });
 
 
 /**************************
@@ -571,6 +570,78 @@ bitmoji.prototype.draw = function() {
     drawHead(this.x - 88/p,this.y - 97/p,this.h,p,this.clothesColorL,this.clothesColorD,this.initials);
 };
 
+var Austin = new bitmoji(92,342,150,color(255, 0, 0),color(148, 31, 31),false);
+
 /**********************
 END AUSTIN BITMOJI CODE
 ***********************/
+var scene = "splash";
+
+var Button = function(config) {
+    this.x = config.x                           || 0;
+    this.y = config.y                           || 0;
+    this.width = config.width                   || 150;
+    this.height = config.height                 || 50;
+    this.color = config.color                   || color(250, 5, 250);
+    this.textColor = config.textColor           || color(0, 0, 0);
+    this.label = config.label                   || "HERE'S SOME TEXT";
+    this.isClicked = config.isClicked           || false;
+    this.onClick = config.onClick               || function(){println("!");};
+};
+Button.prototype.draw = function() {
+    noStroke();
+    fill(this.color);
+    rectMode(CENTER);
+    rect(this.x, this.y, this.width, this.height, 5);
+    fill(255, 255, 255);
+    textSize(19);
+    textAlign(CENTER, CENTER);
+    fill(this.textColor);
+    text(this.label, this.x, this.y);
+    rectMode(CORNER);
+};
+Button.prototype.isMouseInside = function() {
+    return mouseX > this.x - this.width/2  &&
+           mouseX < this.x + this.width/2  &&
+           mouseY > this.y - this.height/2 &&
+           mouseY < this.y + this.height/2;
+};
+Button.prototype.handleMouseClick = function() {
+    if (this.isMouseInside()) {
+        this.onClick();
+    }
+};
+
+var startBtn = new Button ({ 
+                        x: 185,     y: 158,
+                        width: 100,    height: 62,
+                        color: color(0, 0, 0),
+                        textColor: color(255, 255, 255),
+                        label: "Start",
+                        onClick: function(){
+                            scene = "game";
+                        }
+                        });
+
+
+draw = function() {
+    if (scene === "splash"){
+        background(143, 205, 255);
+        nathan.draw();
+        Austin.draw();
+        fill(0, 0, 0);
+        textSize(75);
+        text("SHAPES", 200, 50);
+        startBtn.draw();
+    }
+    else if (scene === "game"){
+        background(0, 0, 0);
+        text("Here be game", 200, 200);
+    }
+};
+
+mouseClicked = function(){
+    if (scene === "splash"){
+        startBtn.handleMouseClick();
+    }
+};
