@@ -19,7 +19,12 @@ var SceneType = {
     ColorPickerActive: 2
 };
 var scene = SceneType.Drawing;
-var modeMenuBottom = "DEFAULT";
+
+var MenuBottomType = {
+    Default: 0
+};
+var modeMenuBottom = MenuBottomType.Default;
+
 var brushColor = color(0, 0, 255);
 
 var ptsList = []; //all blanks
@@ -233,7 +238,7 @@ TRI.prototype.draw = function() {
 mouseClicked = function(){
     if (mouseButton === LEFT){
         if (scene === SceneType.Drawing){
-            if (modeMenuBottom === "DEFAULT"){
+            if (modeMenuBottom === MenuBottomType.Default){
                 if (mouseY > 350){
                     modeShape = ShapeMode.None;
                     resetButtons();
@@ -405,7 +410,7 @@ draw = function() {
             fill(201, 156, 100);
             rect(0,-50,width,100,17);
         
-        if (modeMenuBottom === "DEFAULT"){
+        if (modeMenuBottom === MenuBottomType.Default){
             quadButton.draw();
             triButton.draw();
             ellButton.draw();
@@ -450,5 +455,15 @@ draw = function() {
             stroke(0,0,0);
         }
         
+    }
+};
+
+
+mouseMoved = function() {
+    if(scene === SceneType.ColorPickerActive && mouseX >= 75 && mouseX <= 330&&mouseY >= 75 && mouseY <= 330) {
+        stroke(0);
+        strokeWeight(7);
+        fill(get(mouseX,mouseY));
+        ellipse(33,33,50,50);
     }
 };
