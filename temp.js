@@ -40,7 +40,31 @@ color(150, 255, 255),   //blue      120-180
 color(200, 255, 255),   //purple    200-225
 color(0, 0, 0)];        //black
 
-var shapeList = [];
+// var shapeList = [];
+
+var layers = [
+    {
+        shapeList: [],
+        hidden: true
+    },
+    {
+        shapeList: [],
+        hidden: false
+    },
+    {
+        shapeList: [],
+        hidden: false
+    },
+    {
+        shapeList: [],
+        hidden: false
+    },
+    {
+        shapeList: [],
+        hidden: false
+    }
+];
+var selectedLayer = 4;
 
 //constants\\
 var bottomButtonHeight = 400 - 14;
@@ -287,6 +311,17 @@ mouseClicked = function () {
                 } //bottom row
                 //brushColor =  palette[selectedSwatch];
             }
+
+            if (mouseX >= 375 && mouseX <= 400 && mouseY >= 50 && mouseY <= 75 + (25 + 33) * 4) {
+                for (var i = 0; i < layers.length; i++) {
+                    var layerY = 75 + (i * 33);
+                    if (mouseY >= layerY - 12 && mouseY <= layerY + 12) {
+                        selectedLayer = i;
+                        break;
+                    }
+                }
+            }
+
         }
     }
     if (mouseButton === RIGHT) {
@@ -320,13 +355,17 @@ draw = function () {
         background(255, 255, 255);
         strokeWeight(1);
 
-        for (var k in shapeList) {
-            fill(shapeList[k].fillColor);
-            quad(shapeList[k].corners[0], shapeList[k].corners[1],
-                shapeList[k].corners[2], shapeList[k].corners[3],
-                shapeList[k].corners[4], shapeList[k].corners[5],
-                shapeList[k].corners[6], shapeList[k].corners[7]);
-        } //draw placed shapes
+        for (var i = layers.length-1; i >= 0; i--) {
+            if(!layers[i].hidden){
+            for (var k in layers[i].shapeList) {
+                fill(layers[i].shapeList[k].fillColor);
+                quad(layers[i].shapeList[k].corners[0], layers[i].shapeList[k].corners[1],
+                    layers[i].shapeList[k].corners[2], layers[i].shapeList[k].corners[3],
+                    layers[i].shapeList[k].corners[4], layers[i].shapeList[k].corners[5],
+                    layers[i].shapeList[k].corners[6], layers[i].shapeList[k].corners[7]);
+            } //draw placed shapes    
+            }
+        }
         colorMode(HSB);
         fill(palette[selectedSwatch]);
         if (modeShape === ShapeMode.Quad) {
@@ -365,13 +404,8 @@ draw = function () {
                 }
             }
             else {
-                shapeList.push(new QUADR([ptsList[0], ptsList[1],
-                ptsList[2], ptsList[3],
-                ptsList[4], ptsList[5],
-                ptsList[6], ptsList[7]],
-                    palette[selectedSwatch],
-                    color(0, 0, 0)
-                ));
+                layers[selectedLayer].shapeList.push(new QUADR([ptsList[0], ptsList[1], ptsList[2], ptsList[3], ptsList[4], ptsList[5], ptsList[6], ptsList[7]], palette[selectedSwatch],
+                    color(0, 0, 0)));
                 ptsList = ["", "", "", "", "", "", "", ""];
             }
         } //draw quad preview
@@ -399,12 +433,10 @@ draw = function () {
                 }
             }
             else {
-                shapeList.push(new TRI([ptsList[0], ptsList[1],
-                ptsList[2], ptsList[3],
-                ptsList[4], ptsList[5]
-                ],
-
-                    palette[selectedSwatch]));
+                layers[selectedLayer].shapeList.push(new TRI(
+                    [ptsList[0], ptsList[1], ptsList[2], ptsList[3], ptsList[4], ptsList[5]],
+                    palette[selectedSwatch]
+                ));
                 ptsList = ["", "", "", "", "", ""];
             }
         }//draw tri preview
@@ -444,6 +476,26 @@ draw = function () {
                 15 + 21 * floor((l) / (palette.length / 2)),
                 20, 20);
         }
+
+        for (var i = 0; i < layers.length; i++) {
+
+                if (i === selectedLayer) {
+                    strokeWeight(2);
+                    stroke(39, 176, 217);
+                } else {
+                    strokeWeight(1);
+                    stroke(0, 0, 0);
+                }
+
+                fill(255, 255, 255);
+                rect(375, 75 + (i * 33), 25, 25);
+                fill(0, 0, 0);
+                text(layers.length - i, 375, 75 + (i * 33));
+            
+        }
+        stroke(0, 0, 0);
+        strokeWeight(1);
+
         if (scene === SceneType.InitColorPicker) {
 
             //draw vignette
