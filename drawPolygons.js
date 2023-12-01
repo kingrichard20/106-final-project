@@ -30,6 +30,30 @@ var brushColor = color(0, 0, 255);
 
 var ptsList = []; //all blanks
 
+var layers = [
+    {
+        shapeList: [],
+        hidden: true
+    },
+    {
+        shapeList: [],
+        hidden: false
+    },
+    {
+        shapeList: [],
+        hidden: false
+    },
+    {
+        shapeList: [],
+        hidden: false
+    },
+    {
+        shapeList: [],
+        hidden: false
+    }
+];
+var selectedLayer = 4;
+
 var palette = [color(255, 0, 255),     //white
 color(0, 255, 255),     //red       0-15
 color(25, 255, 255),    //orange    20-35
@@ -43,8 +67,8 @@ var shapeList = [];
 
 //constants\\
 var bottomButtonHeight = 400 - 14;
-var rightEdge = 390; //right edge of palette
-var leftEdge = rightEdge - (21 * ceil(palette.length / 2));
+var paletteRightEdge = 390; //right edge of palette
+var paletteLeftEdge = paletteRightEdge - (21 * ceil(palette.length / 2));
 
 var selectedSwatch = 0;
 
@@ -209,14 +233,14 @@ var resetButtons = function (clickedButton) {
 var POLY = function (corners, fillColor, strokeColor) {
     this.corners = corners;
     this.fillColor = fillColor;
-    this.strokeColor = strokeColor;   
+    this.strokeColor = strokeColor;
 };
 POLY.prototype.draw = function (corners, fillColor, strokeColor) {
     stroke(this.strokeColor);
     fill(this.fillColor);
     strokeWeight(1);
     beginShape();
-    for (var q in this.corners){
+    for (var q in this.corners) {
         vertex(this.corners[q][0], this.corners[q][1]);
     }
     endShape(CLOSE);
@@ -227,45 +251,74 @@ POLY.prototype.draw = function (corners, fillColor, strokeColor) {
 ******************/
 
 mouseClicked = function () {
-    if (scene === SceneType.Drawing){
-        if (mouseButton === LEFT){
+    if (scene === SceneType.Drawing) {
+        if (mouseButton === LEFT) {
             if (mouseY > 350) {
                 modeShape = ShapeMode.None;
                 resetButtons();
-                        
+
                 //Handle bottom menu buttons
                 polyButton.handleMouseClick();
                 triButton.handleMouseClick();
                 ellButton.handleMouseClick();
                 complexButton.handleMouseClick();
             }
-            
+
             //      DEFINING SHAPE PREVIEW      \\
             if (mouseX < 350 && mouseX > 50 &&
                 mouseY < 350 && mouseY > 52) {
-                if (modeShape === ShapeMode.Poly){
+                if (modeShape === ShapeMode.Poly) {
                     ptsList.push([mouseX, mouseY]);
                 }
             } //draw shape
-                
+
             // Pick color from palette \\
-            if (mouseX < rightEdge && mouseX > leftEdge && 
+            if (mouseX < paletteRightEdge && mouseX > paletteLeftEdge &&
                 mouseY < 47 && mouseY > 5) {
-                    if (mouseY < 25) {
-                        selectedSwatch = (floor(((rightEdge - mouseX) / (rightEdge - leftEdge)) * ceil(palette.length / 2)));
-                    } //top row
-                    else {
-                        selectedSwatch = (floor(((rightEdge - mouseX) / (rightEdge - leftEdge)) * ceil(palette.length / 2))) + ceil(palette.length / 2);
-                    } //bottom row
-                    //brushColor =  palette[selectedSwatch];
+                if (mouseY < 25) {
+                    selectedSwatch = (floor(((paletteRightEdge - mouseX) / (paletteRightEdge - paletteLeftEdge)) * ceil(palette.length / 2)));
+                } //top row
+                else {
+                    selectedSwatch = (floor(((paletteRightEdge - mouseX) / (paletteRightEdge - paletteLeftEdge)) * ceil(palette.length / 2))) + ceil(palette.length / 2);
+                } //bottom row
+                //brushColor =  palette[selectedSwatch];
+            }
+
+            if (mouseX >= 375 && mouseX <= 400 && mouseY >= 50 && mouseY <= 75 + (25 + 33) * 4) {
+                for (var i = 0; i < layers.length; i++) {
+                    var layerY = 75 + (i * 33);
+                    if (mouseY >= layerY - 12 && mouseY <= layerY + 12) {
+                        selectedLayer = i;
+                        break;
+                    }
                 }
-            
             }
-        if (mouseButton === RIGHT){
-            if (ptsList.length > 0){
-                shapeList.push(new POLY(ptsList,palette[selectedSwatch],color(0, 0, 0)));
-                ptsList = [];
+
+        }
+
+
+
+
+        if (mouseButton === RIGHT) {
+            if (ptsList.length > 0) {
+                shapeList.push(new POLY(ptsList, palette[selectedSwatch], color(0, 0, 0)));
+                ptsList = []; //clear shape preview
+                // return;
             }
+            if (mouseX < paletteRightEdge && mouseX > paletteLeftEdge && mouseY < 47 && mouseY > 5) {
+                scene = SceneType.InitColorPicker;
+            }
+
+            if (mouseX >= 375 && mouseX <= 400 && mouseY >= 50 && mouseY <= 75 + (25 + 33) * 4) {
+                for (var i = 0; i < layers.length; i++) {
+                    var layerY = 75 + (i * 33);
+                    if (mouseY >= layerY - 12 && mouseY <= layerY + 12) {
+                        layers[i].hidden ^= 1;
+                        break;
+                    }
+                }
+            }
+
         }
     }
     if (scene === SceneType.ColorPickerActive) {
@@ -292,21 +345,21 @@ draw = function () {
         background(255, 255, 255);
         stroke(0, 0, 0);
         strokeWeight(1);
-    
+
         colorMode(HSB);
         fill(palette[selectedSwatch]);
         for (var k in shapeList) {
             shapeList[k].draw();
         } //draw placed shapes
-        
+
         //DRAW POLYGON PREVIEW\\
         fill(palette[selectedSwatch]);
-        if(modeShape === ShapeMode.Poly){
+        if (modeShape === ShapeMode.Poly) {
             beginShape();
-                for (var r in ptsList){
-                    vertex(ptsList[r][0], ptsList[r][1]);
-                }
-                    vertex(mouseX,mouseY);
+            for (var r in ptsList) {
+                vertex(ptsList[r][0], ptsList[r][1]);
+            }
+            vertex(mouseX, mouseY);
             endShape(CLOSE);
         }
 
@@ -348,6 +401,30 @@ draw = function () {
                 15 + 21 * floor((l) / (palette.length / 2)),
                 20, 20);
         }
+
+        for (var i = 0; i < layers.length; i++) {
+
+            if (i === selectedLayer) {
+                strokeWeight(2);
+                stroke(39, 176, 217);
+            } else {
+                strokeWeight(1);
+                stroke(0, 0, 0);
+            }
+
+            if(layers[i].hidden) {
+                fill(181, 181, 181);
+            } else {
+                fill(255, 255, 255);
+            }
+            rect(375, 75 + (i * 33), 25, 25);
+            fill(0, 0, 0);
+            text(layers.length - i, 375, 75 + (i * 33));
+
+        }
+        stroke(0, 0, 0);
+        strokeWeight(1);
+
         if (scene === SceneType.InitColorPicker) {
 
             //draw vignette
