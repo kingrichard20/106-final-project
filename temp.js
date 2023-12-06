@@ -15,14 +15,15 @@ var ShapeMode = {
     None: 0,
     Poly: 1,
     Ellipse: 3,
-    Complex: 4
+    Line: 4
 };
 var modeShape = ShapeMode.None;
 
 var SceneType = {
     Drawing: 0,
     InitColorPicker: 1,
-    ColorPickerActive: 2
+    ColorPickerActive: 2,
+    Eyedropper: 3
 };
 var scene = SceneType.Drawing;
 
@@ -33,7 +34,7 @@ var modeMenuBottom = MenuBottomType.Default;
 
 var brushColor = color(0, 0, 255);
 
-var Stroke = false;
+var outline = false;
 
 var previewVertices = [];
 
@@ -62,14 +63,18 @@ var layers = [
 var selectedLayer = 4;
 
 var palette = [
-    color(255, 0, 255),     //white
     color(0, 255, 255),     //red       0-15
     color(25, 255, 255),    //orange    20-35
     color(50, 255, 255),    //yellow    40-55
     color(75, 255, 255),    //green     75-100
     color(150, 255, 255),   //blue      120-180
     color(200, 255, 255),   //purple    200-225
-    color(0, 0, 0)];        //black
+    color(250, 100, 255),   //pink
+    color(25, 150, 150),    //brown
+    color(125, 255, 255),   //cyan
+    color(0, 0, 0),         //black
+    color(255, 0, 255),     //white
+    0];                     //transparent (keep at the end plz)
 
 var shapeList = [];
 
@@ -118,6 +123,7 @@ Button.prototype.isMouseInside = function () {
 };
 Button.prototype.handleMouseClick = function () {
     if (this.isMouseInside()) {
+        this.reactToClick();
         this.onClick();
     }
 };
@@ -126,14 +132,13 @@ Button.prototype.reactToClick = function () {
         this.width = this.width / 0.95;
         this.height = this.height / 0.95;
         this.color = this.unclickedColor;
-        this.isClicked = false;
     }
     else {
         this.width = this.width * 0.95;
         this.height = this.height * 0.95;
         this.color = this.clickedColor;
-        this.isClicked = true;
     }
+    this.isClicked^=1;
 };
 
 var polyButton = new Button({
@@ -148,12 +153,10 @@ var polyButton = new Button({
         if (modeShape !== ShapeMode.Poly) {
             modeShape = ShapeMode.Poly;
             previewVertices = [];
-            polyButton.reactToClick();
         }
         else {
             modeShape = ShapeMode.None;
             previewVertices = []; //clear points
-            polyButton.reactToClick();
         }
     }
 });
@@ -169,26 +172,30 @@ var ellButton = new Button({
         if (modeShape !== ShapeMode.Ellipse) {
             modeShape = ShapeMode.Ellipse;
             previewVertices = [];
-            ellButton.reactToClick();
         }
         else {
             modeShape = ShapeMode.None;
             previewVertices = []; //clear points
-            ellButton.reactToClick();
         }
     }
 });
-var complexButton = new Button({
-    x: 356, y: bottomButtonHeight,
+var lineButton = new Button({
+    x: 246, y: bottomButtonHeight,
     width: 83, height: 62,
     unclickedColor: color(0, 0, 255),
     clickedColor: color(0, 0, 200),
     textColor: color(0, 0, 0),
-    label: "Complex",
+    label: "Line",
     isClicked: false,
     onClick: function () {
-        println("Complex shapes coming soon!");
-        complexButton.reactToClick();
+        if (modeShape !== ShapeMode.Line) {
+            modeShape = ShapeMode.Line;
+            previewVertices = [];
+        }
+        else {
+            modeShape = ShapeMode.None;
+            previewVertices = []; //clear points
+        }
     }
 });
 var resetShapeButtons = function (clickedButton) {
@@ -198,8 +205,8 @@ var resetShapeButtons = function (clickedButton) {
     if (clickedButton !== ellButton && ellButton.isClicked) {
         ellButton.reactToClick();
     }
-    if (clickedButton !== complexButton && complexButton.isClicked) {
-        complexButton.reactToClick();
+    if (clickedButton !== lineButton && lineButton.isClicked) {
+        lineButton.reactToClick();
     }
 };
 
@@ -215,18 +222,32 @@ var strokeButton = new Button({
     label: "Stroke",
     isClicked: false,
     onClick: function () {
-        if (this.isClicked && Stroke) {
-            Stroke = false;
-            strokeButton.reactToClick();
+        if (this.isClicked &&outline) {
+           outline = false;
             this.textSize = 12;
             this.outlineColor = color(23, 128, 201);
         }
-        else if (!this.isClicked && !Stroke) {
-            Stroke = true;
-            strokeButton.reactToClick();
+        else if (!this.isClicked && !outline) {
+           outline = true;
             this.textSize = 11;
             this.outlineColor = color(0,0,0);
         }
+    }
+});
+
+var eyedropperButton = new Button({
+    x: 146, y: 27,
+    width: 40, height: 40,
+    color: color(0,0,0),
+    unclickedColor: color(0,0,255),
+    clickedColor: color(0,0,200),
+    outlineColor: color(23, 128, 201),
+    textColor: color(0, 0, 0),
+    textSize: 12,
+    label: "Pick",
+    isClicked: false,
+    onClick: function () {
+        scene = scene === SceneType.Eyedropper ? SceneType.Drawing : SceneType.Eyedropper;
     }
 });
 
@@ -235,41 +256,53 @@ var strokeButton = new Button({
 ******************/
 
 //Polygons\\
-var POLY = function (corners, fillColor, outlineColor, outline) {
-    this.corners = corners;
+var POLY = function (vertices, fillColor, outlineColor, outline) {
+    this.vertices = vertices;
     this.fillColor = fillColor;
     this.outlineColor = outlineColor;
     this.outline = outline;
 };
-POLY.prototype.draw = function (corners, fillColor, outlineColor, outline) {
+POLY.prototype.draw = function (vertices, fillColor, outlineColor, outline) {
     stroke(this.outlineColor);
-    fill(this.fillColor);
+    if (this.fillColor === 0){noFill();}
+    else{fill(this.fillColor);}
     if (this.outline){strokeWeight(1);}
     else {noStroke();}
     beginShape();
-    for (var q in this.corners) {
-        vertex(this.corners[q][0], this.corners[q][1]);
+    for (var q in this.vertices) {
+        vertex(this.vertices[q][0], this.vertices[q][1]);
     }
     endShape(CLOSE);
 }; //poly draw method
 
 //Ellipses\\
-var ELL = function (corners, fillColor, outlineColor, outline) {
-    this.corners = corners;
+var ELL = function (vertices, fillColor, outlineColor, outline) {
+    this.vertices = vertices;
     this.fillColor = fillColor;
     this.outlineColor = outlineColor;
     this.outline = outline;
 };
-ELL.prototype.draw = function  (corners, fillColor, outlineColor, outline) {
+ELL.prototype.draw = function  (vertices, fillColor, outlineColor, outline) {
     stroke(this.outlineColor);
-    fill(this.fillColor);
+    if (this.fillColor === 0){noFill();}
+    else{fill(this.fillColor);}
     ellipseMode(CORNER);
     if (this.outline){strokeWeight(1);}
     else {noStroke();}
-    ellipse(min(this.corners[0][0], this.corners[1][0]), min(this.corners[0][1], this.corners[1][1]),
-            abs(this.corners[1][0] - this.corners[0][0]), 
-            abs(this.corners[1][1] - this.corners[0][1]));
+    ellipse(min(this.vertices[0][0], this.vertices[1][0]), min(this.vertices[0][1], this.vertices[1][1]),
+            abs(this.vertices[1][0] - this.vertices[0][0]), 
+            abs(this.vertices[1][1] - this.vertices[0][1]));
 }; //ell draw method
+
+//Lines\\
+var LIN = function (vertices, color){
+    this.vertices = vertices;
+    this.color = color;
+};
+LIN.prototype.draw = function() {
+    stroke(this.color);
+    line(this.vertices[0][0], this.vertices[0][1], this.vertices[1][0], this.vertices[1][1]);
+};
 
 var HistoryEntryType = {
     AddShape: 0
@@ -293,14 +326,25 @@ var clickBottomMenu = function(){
 
     polyButton.handleMouseClick();
     ellButton.handleMouseClick();
-    complexButton.handleMouseClick();
+    lineButton.handleMouseClick();
 };
 var clickCanvas = function(){
     if (mouseButton === LEFT){
+        
+        if(scene === SceneType.Eyedropper) {
+            palette[selectedSwatch] = (get(mouseX, mouseY));
+            eyedropperButton.reactToClick();
+            scene = SceneType.Drawing;
+            return;
+        }
+        
         if (modeShape === ShapeMode.Poly) {
             previewVertices.push([mouseX, mouseY]);
         }
         if (modeShape === ShapeMode.Ellipse && previewVertices.length === 0) {
+            previewVertices.push([mouseX, mouseY]);
+        }
+        if (modeShape === ShapeMode.Line && previewVertices.length === 0) {
             previewVertices.push([mouseX, mouseY]);
         }
     }
@@ -311,7 +355,7 @@ var clickCanvas = function(){
                     new POLY(previewVertices, 
                              palette[selectedSwatch], 
                              color(0, 0, 0), 
-                             Stroke));
+                            outline));
             }
             if (modeShape === ShapeMode.Ellipse){
                 previewVertices.push([mouseX, mouseY]);
@@ -319,7 +363,14 @@ var clickCanvas = function(){
                     new ELL(previewVertices, 
                             palette[selectedSwatch], 
                             color(0, 0, 0),
-                            Stroke));
+                           outline));
+            }
+            if (modeShape === ShapeMode.Line){
+                previewVertices.push([mouseX, mouseY]);
+                layers[selectedLayer].shapeList.push(
+                    new LIN(previewVertices, 
+                            palette[selectedSwatch]
+                            ));      
             }
             actionHistory.push(new HistoryEntry(
                 HistoryEntryType.AddShape,
@@ -340,7 +391,10 @@ var clickPalette = function(){
         }
     }
     else if (mouseButton === RIGHT){
+        if (palette[(floor(((paletteRightEdge - mouseX) / (paletteRightEdge - paletteLeftEdge)) * ceil(palette.length / 2))) + ceil(palette.length / 2)] !== 0){
         scene = SceneType.InitColorPicker;
+        }
+        
     }
 };
 var clickLayers = function(){
@@ -355,6 +409,7 @@ var clickLayers = function(){
 };
 var clickTopMenu = function(){
     strokeButton.handleMouseClick();
+    eyedropperButton.handleMouseClick();
 };
 
 //DRAW functions for DRAWING scene\\
@@ -377,14 +432,15 @@ var drawBorder = function(){
     rect(0, -50, width, 100, 17);
 };
 var drawPreview = function(){
-    fill(palette[selectedSwatch]);
-    if (Stroke){strokeWeight(1);}
-    else if (previewVertices.length <= 1) {
+    if (palette[selectedSwatch] === 0){noFill();}
+    else{fill(palette[selectedSwatch]);}
+    if (modeShape === ShapeMode.Poly) {
+        if (outline){strokeWeight(1);}
+        else if (previewVertices.length <= 1) {
         strokeWeight(1);
         stroke(palette[selectedSwatch]);
     }
     else {noStroke();}
-    if (modeShape === ShapeMode.Poly) {
         beginShape();
         for (var r in previewVertices) {
             vertex(previewVertices[r][0], previewVertices[r][1]);
@@ -393,6 +449,10 @@ var drawPreview = function(){
         endShape(CLOSE);
     }
     if (modeShape === ShapeMode.Ellipse) {
+        if (outline){
+            stroke(0, 0, 0);
+            strokeWeight(1);}
+        else {noStroke();}
         ellipseMode(CORNER);
         if (previewVertices.length === 0){
             ellipse(mouseX,mouseY,2,2);
@@ -404,6 +464,19 @@ var drawPreview = function(){
                      abs(mouseY - previewVertices[0][1]));
         }
     }
+    if (modeShape === ShapeMode.Line){
+        if (palette[selectedSwatch] === 0){noStroke();}
+        else{
+            stroke(palette[selectedSwatch]);
+            strokeWeight(1);}
+        if (previewVertices.length === 0){
+            point(mouseX, mouseY);
+        }
+        else {
+            line(previewVertices[0][0], previewVertices[0][1],
+                 mouseX, mouseY);
+        }
+    }    
 };
 var drawShapes = function(){
     colorMode(HSB);
@@ -420,25 +493,53 @@ var drawBottomMenu = function(){
     if (modeMenuBottom === MenuBottomType.Default) {
         polyButton.draw();
         ellButton.draw();
-        complexButton.draw();
+        lineButton.draw();
     }
 };
 var drawSelectedSwatch = function(){
     rectMode(CENTER);
-    fill(palette[selectedSwatch]);
+    if (palette[selectedSwatch] !== 0){
+        fill(palette[selectedSwatch]);
+    }
+    else {
+        noStroke();
+        fill(0,0,200); //light grey
+            rect(25,25,25,25);
+        fill(255,0,255); //white
+            rect(20,20,12,12);
+            rect(32,32,13,13);
+        
+        stroke(0,0,0);
+        noFill();
+    }
     rect(25, 25, 25, 25);
     rectMode(CORNER);
 };
 var drawPalette = function(){
     rectMode(CENTER);
     for (var l in palette) {
-      fill(palette[l]);
+      if (palette[l] !== 0){fill(palette[l]);}
+      else{fill(0,0,200);}
       rect(
         380 - (21 * l) + (21 * ceil(palette.length / 2)) * floor((l) / (palette.length / 2)),
         15 + 21 * floor((l) / (palette.length / 2)),
         20, 
         20);
     }
+    fill(255, 0, 255);
+    noStroke();
+    rectMode(CORNER);
+    rect(
+        380 - (21 * palette.length/2) + 21,
+        15 + 21 + 1,
+        10, 
+        9);
+    rect(
+        380 - (21 * palette.length/2) + 12,
+        15 + 21 - 9,
+        9, 
+        10);
+    rectMode(CENTER);
 };
 var drawLayersUI = function(){
     colorMode(RGB);
@@ -508,12 +609,64 @@ var drawBrightnessBar = function(){
     strokeWeight(1);
 };
 
+//Export functions\\
+var drawingName = "myDrawing";
+var centerX = 200;
+var centerY = 200;
+var px = function(n){return n - centerX;}; //for cleanliness
+var py = function(n){return n - centerY;};
+
+var exportPicture = function() {
+    var result = "";
+    var indent = "    ";
+    
+    result += "var " + drawingName + " = function(x, y, size){";
+    result += "\n" + indent + "var p = 100/size;";
+    result += "\n\n" + indent + "colorMode(HSB);";
+    result += "\n" + indent + "ellipseMode(CORNER);";
+    for (var i in layers){ //for every layer
+        result  += "\n" + "\n" + indent + "//layer " + i;
+        for (var j in layers[i].shapeList){ //for every shape
+                if (layers[i].shapeList[j].outline){result += "\n" + indent + "strokeWeight(1);";}
+                else {result += "\n" + indent + "noStroke();";}
+                if (layers[i].shapeList[j] instanceof POLY){
+                        if (layers[i].shapeList[j].fillColor === 0){result += "\n" + indent + "noFill();";}
+                        else {
+                            result += "\n" + indent + "fill(" + hue(layers[i].shapeList[j].fillColor) + ", " + saturation(layers[i].shapeList[j].fillColor) + ", " + brightness(layers[i].shapeList[j].fillColor) + ");";
+                        }
+                        result += "\n" + indent + "beginShape();";
+                        for (var k in layers[i].shapeList[j].vertices){
+                        result += "\n" + indent + "vertex(" + px(layers[i].shapeList[j].vertices[k][0]) + " / p" + " + x" + ", " + py(layers[i].shapeList[j].vertices[k][1]) + " / p" + " + y" + ");";
+                        }
+                    result += "\n" + indent + "endShape(CLOSE);\n";
+                }
+                if (layers[i].shapeList[j] instanceof ELL){
+                    if (layers[i].shapeList[j].fillColor === 0){result += "\n" + indent + "noFill();";}
+                        else {
+                            result += "\n" + indent + "fill(" + hue(layers[i].shapeList[j].fillColor) + ", " + saturation(layers[i].shapeList[j].fillColor) + ", " + brightness(layers[i].shapeList[j].fillColor) + ");";
+                        }
+
+                result += "\n" + indent + "ellipse(" + px(min(layers[i].shapeList[j].vertices[0][0], layers[i].shapeList[j].vertices[1][0])) + " / p" + " + x " + ", " + py(min(layers[i].shapeList[j].vertices[0][1], layers[i].shapeList[j].vertices[1][1])) + " / p" + " + y " + ", " + abs(layers[i].shapeList[j].vertices[1][0] - layers[i].shapeList[j].vertices[0][0]) + " / p" + ", " + abs(layers[i].shapeList[j].vertices[1][1] - layers[i].shapeList[j].vertices[0][1]) + " / p" + ");";
+            }
+                if (layers[i].shapeList[j] instanceof LIN){
+                result += "\n" + indent + "stroke(" + hue(layers[i].shapeList[j].color) + ", " + saturation(layers[i].shapeList[j].color) + ", " + brightness(layers[i].shapeList[j].color) + ");";
+                    result += "\n" + indent + "line(" + layers[i].shapeList[j].vertices[0][0] + ", " + layers[i].shapeList[j].vertices[0][1] + ", " + layers[i].shapeList[j].vertices[1][0] + ", " + layers[i].shapeList[j].vertices[1][1] + ");";
+                }
+        }
+    }
+    result += "\n\ncolorMode(RGB);";
+    result += "\nellipseMode(CORNER);";
+    result += "\n};";
+    result += "\n\n\n" + drawingName + "(200,200,100);";
+    println(result);
+};
+
 /******************************
  Interactions & Function Calls
 *******************************/
 
 mouseClicked = function () {
-    if (scene === SceneType.Drawing) {
+    if (scene === SceneType.Drawing || scene === SceneType.Eyedropper) {
         //If clicking bottom menu bottons\\
         if (mouseY > 350 && mouseButton === LEFT) {
             clickBottomMenu();
@@ -559,7 +712,7 @@ mouseClicked = function () {
 
 draw = function () {
     //The || is there so that the vignette isn't redrawn over itself
-    if (scene === SceneType.Drawing || scene === SceneType.InitColorPicker){
+    if (scene === SceneType.Drawing || scene === SceneType.InitColorPicker || scene === SceneType.Eyedropper){
         //Refresh canvas\\
         colorMode(RGB);
         background(255, 255, 255);
@@ -568,7 +721,7 @@ draw = function () {
         
         drawShapes();
         
-        if (modeShape !== ShapeMode.none){drawPreview();}
+        if (modeShape !== ShapeMode.none && scene !== SceneType.Eyedropper){drawPreview();}
         
         drawBorder();
         
@@ -581,6 +734,17 @@ draw = function () {
         drawLayersUI();
         
         strokeButton.draw();
+        
+        eyedropperButton.draw();
+    }
+    
+    if(scene === SceneType.Eyedropper && mouseX < 350 && mouseX > 50 && mouseY < 350 && mouseY > 52) {
+        stroke(0);
+        triangle(mouseX + 2, mouseY - 2, 
+                 mouseX + 13, mouseY + -33, 
+                 mouseX + 27, mouseY - 10);
+        fill(get(mouseX,mouseY));
+        ellipse(mouseX + 22, mouseY - 22, 33, 33);
     }
     
     if (scene === SceneType.InitColorPicker) {initializeColorPicker();}
@@ -605,12 +769,14 @@ mouseMoved = function () {
 
 keyPressed = function () {
     if (keyCode === 90 && actionHistory.length > 0){ //z
-    // println("Undo!"); <- Works!
     var latestAction = actionHistory.length - 1;
     
     layers[actionHistory[latestAction].layer].shapeList.splice(actionHistory[latestAction].index, 1);
     actionHistory.splice(latestAction, 1);
-        // println(actionHistory[].layer);
+    }
+    
+    if (keyCode === 69){
+        exportPicture();
     }
 };
 
