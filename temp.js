@@ -23,7 +23,8 @@ var SceneType = {
     Drawing: 0,
     InitColorPicker: 1,
     ColorPickerActive: 2,
-    Eyedropper: 3
+    Eyedropper: 3,
+    InfoScreen: 4
 };
 var scene = SceneType.Drawing;
 
@@ -141,6 +142,7 @@ Button.prototype.reactToClick = function () {
     this.isClicked^=1;
 };
 
+//Buttom bottons\\
 var polyButton = new Button({
     x: 51, y: bottomButtonHeight,
     width: 100, height: 62,
@@ -210,6 +212,20 @@ var resetShapeButtons = function (clickedButton) {
     }
 };
 
+var infoButton = new Button({
+    x: 375, y: 375,
+    width: 33, height: 33,
+    unclickedColor: color(0, 0, 255),
+    clickedColor: color(0, 0, 200),
+    textColor: color(0, 0, 0),
+    label: "i",
+    isClicked: false,
+    onClick: function () {
+        println("HERE'S SOME INFO");
+    }
+});
+
+//Top bottons\\
 var strokeButton = new Button({
     x: 80, y: 27,
     width: 40, height: 40,
@@ -234,7 +250,6 @@ var strokeButton = new Button({
         }
     }
 });
-
 var eyedropperButton = new Button({
     x: 146, y: 27,
     width: 40, height: 40,
@@ -250,6 +265,7 @@ var eyedropperButton = new Button({
         scene = scene === SceneType.Eyedropper ? SceneType.Drawing : SceneType.Eyedropper;
     }
 });
+
 
 /*****************
    SHAPE OBJECTS
@@ -286,12 +302,12 @@ ELL.prototype.draw = function  (vertices, fillColor, outlineColor, outline) {
     stroke(this.outlineColor);
     if (this.fillColor === 0){noFill();}
     else{fill(this.fillColor);}
-    ellipseMode(CORNER);
+    ellipseMode(CENTER);
     if (this.outline){strokeWeight(1);}
     else {noStroke();}
-    ellipse(min(this.vertices[0][0], this.vertices[1][0]), min(this.vertices[0][1], this.vertices[1][1]),
-            abs(this.vertices[1][0] - this.vertices[0][0]), 
-            abs(this.vertices[1][1] - this.vertices[0][1]));
+    ellipse(this.vertices[0][0], this.vertices[0][1],
+            abs(this.vertices[1][0] - this.vertices[0][0]) * 2, 
+            abs(this.vertices[1][1] - this.vertices[0][1]) * 2);
 }; //ell draw method
 
 //Lines\\
@@ -327,6 +343,8 @@ var clickBottomMenu = function(){
     polyButton.handleMouseClick();
     ellButton.handleMouseClick();
     lineButton.handleMouseClick();
+    
+    infoButton.handleMouseClick();
 };
 var clickCanvas = function(){
     if (mouseButton === LEFT){
@@ -398,14 +416,9 @@ var clickPalette = function(){
     }
 };
 var clickLayers = function(){
-    for (var i = 0; i < layers.length; i++) {
-        var layerY = 75 + (i * 33);
-        if (mouseY >= layerY - 12 && mouseY <= layerY + 12) {
-            if (mouseButton === LEFT)   {selectedLayer = i;}
-            if (mouseButton === RIGHT)  {layers[i].hidden ^= 1;}
-            break;
-        }
-    }
+    //top = 62
+    if (mouseButton === LEFT)   {selectedLayer = floor((mouseY - 64)/25);}
+    if (mouseButton === RIGHT)  {layers[floor((mouseY - 64)/25)].hidden ^= 1;}
 };
 var clickTopMenu = function(){
     strokeButton.handleMouseClick();
@@ -453,15 +466,15 @@ var drawPreview = function(){
             stroke(0, 0, 0);
             strokeWeight(1);}
         else {noStroke();}
-        ellipseMode(CORNER);
+        ellipseMode(CENTER);
         if (previewVertices.length === 0){
             ellipse(mouseX,mouseY,2,2);
         }
         else {
-            ellipse (min(previewVertices[0][0],mouseX),
-                     min(previewVertices[0][1],mouseY), 
-                     abs(mouseX - previewVertices[0][0]), 
-                     abs(mouseY - previewVertices[0][1]));
+            ellipse (previewVertices[0][0],
+                     previewVertices[0][1], 
+                     abs(mouseX - previewVertices[0][0]) * 2, 
+                     abs(mouseY - previewVertices[0][1]) * 2);
         }
     }
     if (modeShape === ShapeMode.Line){
@@ -494,6 +507,8 @@ var drawBottomMenu = function(){
         polyButton.draw();
         ellButton.draw();
         lineButton.draw();
+        
+        infoButton.draw();
     }
 };
 var drawSelectedSwatch = function(){
@@ -557,9 +572,9 @@ var drawLayersUI = function(){
         } else {                  //White if unhidden
             fill(255, 255, 255);
         }
-        rect(375, 75 + (i * 33), 25, 25);
+        rect(375, 75 + (i * 26), 25, 25);
         fill(0, 0, 0);
-        text(layers.length - i, 375, 75 + (i * 33));
+        text(layers.length - i, 375, 75 + (i * 26));
     }
 };
 
@@ -610,7 +625,6 @@ var drawBrightnessBar = function(){
 };
 
 //Export functions\\
-var drawingName = "myDrawing";
 var centerX = 200;
 var centerY = 200;
 var px = function(n){return n - centerX;}; //for cleanliness
@@ -620,10 +634,10 @@ var exportPicture = function() {
     var result = "";
     var indent = "    ";
     
-    result += "var " + drawingName + " = function(x, y, size){";
+    result += "var " + "myDrawing" + " = function(x, y, size){";
     result += "\n" + indent + "var p = 100/size;";
     result += "\n\n" + indent + "colorMode(HSB);";
-    result += "\n" + indent + "ellipseMode(CORNER);";
+    result += "\n" + indent + "ellipseMode(CENTER);";
     for (var i in layers){ //for every layer
         result  += "\n" + "\n" + indent + "//layer " + i;
         for (var j in layers[i].shapeList){ //for every shape
@@ -646,7 +660,13 @@ var exportPicture = function() {
                             result += "\n" + indent + "fill(" + hue(layers[i].shapeList[j].fillColor) + ", " + saturation(layers[i].shapeList[j].fillColor) + ", " + brightness(layers[i].shapeList[j].fillColor) + ");";
                         }
 
-                result += "\n" + indent + "ellipse(" + px(min(layers[i].shapeList[j].vertices[0][0], layers[i].shapeList[j].vertices[1][0])) + " / p" + " + x " + ", " + py(min(layers[i].shapeList[j].vertices[0][1], layers[i].shapeList[j].vertices[1][1])) + " / p" + " + y " + ", " + abs(layers[i].shapeList[j].vertices[1][0] - layers[i].shapeList[j].vertices[0][0]) + " / p" + ", " + abs(layers[i].shapeList[j].vertices[1][1] - layers[i].shapeList[j].vertices[0][1]) + " / p" + ");";
+                result += "\n" + indent + "ellipse(" + 
+                px(layers[i].shapeList[j].vertices[0][0]) + " / p" + " + x " + ", " + 
+                py(layers[i].shapeList[j].vertices[0][1]) + " / p" + " + y " + ", " + 
+                abs(layers[i].shapeList[j].vertices[1][0] - 
+                    layers[i].shapeList[j].vertices[0][0]) + " * 2" + " / p" + ", " + 
+                abs(layers[i].shapeList[j].vertices[1][1] - 
+                    layers[i].shapeList[j].vertices[0][1]) + " * 2" + " / p" + ");";
             }
                 if (layers[i].shapeList[j] instanceof LIN){
                 result += "\n" + indent + "stroke(" + hue(layers[i].shapeList[j].color) + ", " + saturation(layers[i].shapeList[j].color) + ", " + brightness(layers[i].shapeList[j].color) + ");";
@@ -657,7 +677,7 @@ var exportPicture = function() {
     result += "\n\ncolorMode(RGB);";
     result += "\nellipseMode(CORNER);";
     result += "\n};";
-    result += "\n\n\n" + drawingName + "(200,200,100);";
+    result += "\n\n\n" + "myDrawing" + "(200,200,100);";
     println(result);
 };
 
@@ -681,7 +701,7 @@ mouseClicked = function () {
                 clickPalette();     
         }
         //If clicking layers UI\\
-        if (mouseX >= 375 && mouseX <= 400 && mouseY >= 50 && mouseY <= 75 + (25 + 33) * 4) {
+        if (mouseX >= 360 && mouseX <= 390 && mouseY >= 64 && mouseY <= 192) {
             clickLayers();
         }
         //If clicking top menu\\
@@ -744,6 +764,7 @@ draw = function () {
                  mouseX + 13, mouseY + -33, 
                  mouseX + 27, mouseY - 10);
         fill(get(mouseX,mouseY));
+        ellipseMode(CENTER);
         ellipse(mouseX + 22, mouseY - 22, 33, 33);
     }
     
@@ -778,9 +799,18 @@ keyPressed = function () {
     if (keyCode === 69){
         exportPicture();
     }
+    
+    // m
+    if (keyCode === 77){
+        for (var i in layers) {
+            for (var s in layers[i].shapeList) {
+                for (var v in layers[i].shapeList[s].vertices) {
+                    var diffX = 200 - mouseX;
+                    var diffY = 200 - mouseY;
+                    layers[i].shapeList[s].vertices[v][0] += diffX;
+                    layers[i].shapeList[s].vertices[v][1] += diffY;
+                }
+            }
+        }
+    }
 };
-
-
-
-
-
