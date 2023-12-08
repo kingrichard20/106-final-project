@@ -843,8 +843,8 @@ keyPressed = function () {
     if (keyCode === 90 && actionHistory.length > 0){ //z
     var latestAction = actionHistory.length - 1;
     
-    layers[actionHistory[latestAction].layer].shapeList.splice(actionHistory[latestAction].index, 1);
-    actionHistory.splice(latestAction, 1);
+    layers[actionHistory[latestAction].layer].shapeList.pop();
+    actionHistory.pop();
     }
     
     if (keyCode === 69){
