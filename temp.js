@@ -216,12 +216,12 @@ var infoButton = new Button({
     x: 375, y: 375,
     width: 33, height: 33,
     unclickedColor: color(0, 0, 255),
-    clickedColor: color(0, 0, 200),
+    clickedColor: color(0, 0, 255),
     textColor: color(0, 0, 0),
     label: "i",
     isClicked: false,
     onClick: function () {
-        println("HERE'S SOME INFO");
+        scene = SceneType.InfoScreen;
     }
 });
 
@@ -263,6 +263,20 @@ var eyedropperButton = new Button({
     isClicked: false,
     onClick: function () {
         scene = scene === SceneType.Eyedropper ? SceneType.Drawing : SceneType.Eyedropper;
+    }
+});
+
+//Info screen buttons\\
+var backButton = new Button({
+    x: 375, y: 375,
+    width: 33, height: 33,
+    unclickedColor: color(0, 0, 255),
+    clickedColor: color(0, 0, 255),
+    textColor: color(0, 0, 0),
+    label: "x",
+    isClicked: false,
+    onClick: function () {
+        scene = SceneType.Drawing;
     }
 });
 
@@ -708,6 +722,8 @@ mouseClicked = function () {
         if (mouseX <= paletteLeftEdge && mouseY <= 50){
             clickTopMenu();
         }
+        
+        return;
     }
     
     if (scene === SceneType.ColorPickerActive) {
@@ -727,6 +743,11 @@ mouseClicked = function () {
         } else {
             scene = SceneType.Drawing;
         }
+    }
+    
+    if (scene === SceneType.InfoScreen) {
+        backButton.handleMouseClick();
+        return;
     }
 };
 
@@ -775,6 +796,36 @@ draw = function () {
         
         drawBrightnessBar();
     }
+    
+    if (scene === SceneType.InfoScreen){
+        rectMode(CORNER);
+        colorMode(RGB);
+        fill(113, 120, 184);
+        noStroke();
+        rect(0,0,width,height);
+        
+        textAlign(CENTER);
+        fill(255, 255, 255);
+        textSize(50);
+        text("Information", 200,50);
+        
+        textSize(30);
+        text("Hotkeys",70,280);
+        
+        textAlign(LEFT);
+        textSize(20);
+        text("z = Undo", 25, 310);
+        text("e = Export", 25, 335);
+        
+        textAlign(CENTER);
+        textSize(30);
+        text("Instructions", 90, 100);
+        textSize(20);
+        textAlign(LEFT);
+        text("Select a shape and left-click on the canvas to draw it. Right-click to finish a shape",15,115,250, 300);
+        
+        backButton.draw();
+    }
 };
 
 mouseMoved = function () {
@@ -814,3 +865,6 @@ keyPressed = function () {
         }
     }
 };
+
+
+
