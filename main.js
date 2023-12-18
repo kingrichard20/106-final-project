@@ -814,15 +814,13 @@ var strokeButton = new Button({
     label: "Stroke",
     isClicked: false,
     onClick: function () {
-        if (this.isClicked &&outline) {
+        if (this.isClicked && outline) {
            outline = false;
             this.textSize = 12;
-            this.outlineColor = color(23, 128, 201);
         }
         else if (!this.isClicked && !outline) {
            outline = true;
             this.textSize = 11;
-            this.outlineColor = color(0,0,0);
         }
     }
 });
@@ -838,7 +836,11 @@ var eyedropperButton = new Button({
     label: "Pick",
     isClicked: false,
     onClick: function () {
-        scene = scene === SceneType.Eyedropper ? SceneType.Drawing : SceneType.Eyedropper;
+        if(selectedSwatch !== palette.length -1) {
+            scene = scene === SceneType.Eyedropper ? SceneType.Drawing : SceneType.Eyedropper;
+        } else {
+            this.reactToClick();
+        }
     }
 });
 
@@ -1001,16 +1003,13 @@ var clickCanvas = function(){
     }
 };
 var clickPalette = function(){
-    if (mouseButton === LEFT){
-        if (mouseY < 25) /* top row */ {
-            selectedSwatch = (floor(((paletteRightEdge - mouseX) / (paletteRightEdge - paletteLeftEdge)) * ceil(palette.length / 2)));
-        }
-        else{ /* bottom row */
-            selectedSwatch = (floor(((paletteRightEdge - mouseX) / (paletteRightEdge - paletteLeftEdge)) * ceil(palette.length / 2))) + ceil(palette.length / 2);
-        }
+    if (mouseY < 25) /* top row */ {
+        selectedSwatch = (floor(((paletteRightEdge - mouseX) / (paletteRightEdge - paletteLeftEdge)) * ceil(palette.length / 2)));
+    } else{ /* bottom row */
+    selectedSwatch = (floor(((paletteRightEdge - mouseX) / (paletteRightEdge - paletteLeftEdge)) * ceil(palette.length / 2))) + ceil(palette.length / 2);
     }
-    else if (mouseButton === RIGHT){
-        if (palette[(floor(((paletteRightEdge - mouseX) / (paletteRightEdge - paletteLeftEdge)) * ceil(palette.length / 2))) + ceil(palette.length / 2)] !== 0){
+    if (mouseButton === RIGHT){
+        if (palette[selectedSwatch] !== 0){
         scene = SceneType.InitColorPicker;
         }
         
@@ -1247,7 +1246,7 @@ var exportPicture = function() {
                 if (layers[i].shapeList[j] instanceof POLY){
                         if (layers[i].shapeList[j].fillColor === 0){result += "\n" + indent + "noFill();";}
                         else {
-                            result += "\n" + indent + "fill(" + hue(layers[i].shapeList[j].fillColor) + ", " + saturation(layers[i].shapeList[j].fillColor) + ", " + brightness(layers[i].shapeList[j].fillColor) + ");";
+                            result += "\n" + indent + "fill(" + round(hue(layers[i].shapeList[j].fillColor)) + ", " + round(saturation(layers[i].shapeList[j].fillColor)) + ", " + round(brightness(layers[i].shapeList[j].fillColor)) + ");";
                         }
                         result += "\n" + indent + "beginShape();";
                         for (var k in layers[i].shapeList[j].vertices){
@@ -1258,7 +1257,7 @@ var exportPicture = function() {
                 if (layers[i].shapeList[j] instanceof ELL){
                     if (layers[i].shapeList[j].fillColor === 0){result += "\n" + indent + "noFill();";}
                         else {
-                            result += "\n" + indent + "fill(" + hue(layers[i].shapeList[j].fillColor) + ", " + saturation(layers[i].shapeList[j].fillColor) + ", " + brightness(layers[i].shapeList[j].fillColor) + ");";
+                            result += "\n" + indent + "fill(" + round(hue(layers[i].shapeList[j].fillColor)) + ", " + round(saturation(layers[i].shapeList[j].fillColor)) + ", " + round(brightness(layers[i].shapeList[j].fillColor)) + ");";
                         }
 
                 result += "\n" + indent + "ellipse(" + 
@@ -1270,8 +1269,12 @@ var exportPicture = function() {
                     layers[i].shapeList[j].vertices[0][1]) + " * 2" + " / p" + ");";
             }
                 if (layers[i].shapeList[j] instanceof LIN){
-                result += "\n" + indent + "stroke(" + hue(layers[i].shapeList[j].color) + ", " + saturation(layers[i].shapeList[j].color) + ", " + brightness(layers[i].shapeList[j].color) + ");";
-                    result += "\n" + indent + "line(" + layers[i].shapeList[j].vertices[0][0] + ", " + layers[i].shapeList[j].vertices[0][1] + ", " + layers[i].shapeList[j].vertices[1][0] + ", " + layers[i].shapeList[j].vertices[1][1] + ");";
+                result += "\n" + indent + "stroke(" + round(hue(layers[i].shapeList[j].color)) + ", " + round(saturation(layers[i].shapeList[j].color)) + ", " + round(brightness(layers[i].shapeList[j].color)) + ");";
+                    result += "\n" + indent + "line(" + 
+                    px(layers[i].shapeList[j].vertices[0][0]) + " / p + x" + ", " + 
+                    py(layers[i].shapeList[j].vertices[0][1]) + " / p + y" + ", " + 
+                    px(layers[i].shapeList[j].vertices[1][0]) + " / p + x" + ", " + 
+                    py(layers[i].shapeList[j].vertices[1][1]) + " / p + y" + ");";
                 }
         }
     }
@@ -1467,4 +1470,11 @@ keyPressed = function () {
             }
         }
     }
+    
+    if (keyCode === 16){
+        
+    }
 };
+
+
+
