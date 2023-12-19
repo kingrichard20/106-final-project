@@ -580,7 +580,11 @@ colorMode(HSB);
    VARIABLES
 ***************/
 
-var zoom = 1;
+var gridSnap = 0;
+var displayGrid = 0;
+var displayCoords = 0;
+
+var gridSize = 20;
 
 var actionHistory = [];
 
@@ -611,7 +615,7 @@ var modeMenuBottom = MenuBottomType.Default;
 
 var brushColor = color(0, 0, 255);
 
-var outline = false;
+var outline = true;
 
 var previewVertices = [];
 
@@ -938,6 +942,20 @@ var HistoryEntry = function (type, layer, index){
   Functions for cleanliness
 *****************************/
 
+//Math\\
+var roundIfGridSnap = function(coord){
+    var output = 0;
+    if (coord === "X"){
+        var dist = ((round(mouseX/gridSize))*gridSize - mouseX) * gridSnap; 
+        output = mouseX + dist;
+    }
+    else {
+        var dist = ((round(mouseY/gridSize))*gridSize - mouseY) * gridSnap;
+        output = mouseY + dist;
+    }
+    return(output);
+};
+
 //CLICK functions for DRAWING scene\\
 var clickBottomMenu = function(){
     modeShape = ShapeMode.None;
@@ -951,6 +969,8 @@ var clickBottomMenu = function(){
 };
 var clickCanvas = function(){
     if (mouseButton === LEFT){
+        var X = roundIfGridSnap("X");
+        var Y = roundIfGridSnap("Y");
         
         if(scene === SceneType.Eyedropper) {
             palette[selectedSwatch] = (get(mouseX, mouseY));
@@ -960,16 +980,18 @@ var clickCanvas = function(){
         }
         
         if (modeShape === ShapeMode.Poly) {
-            previewVertices.push([mouseX, mouseY]);
+            previewVertices.push([X, Y]);
         }
         if (modeShape === ShapeMode.Ellipse && previewVertices.length === 0) {
-            previewVertices.push([mouseX, mouseY]);
+            previewVertices.push([X, Y]);
         }
         if (modeShape === ShapeMode.Line && previewVertices.length === 0) {
-            previewVertices.push([mouseX, mouseY]);
+            previewVertices.push([X, Y]);
         }
     }
     else if (mouseButton === RIGHT){
+        var X = roundIfGridSnap("X");
+        var Y = roundIfGridSnap("Y");
         if (previewVertices.length > 0) {
             if (modeShape === ShapeMode.Poly){
                 layers[selectedLayer].shapeList.push(
@@ -979,7 +1001,7 @@ var clickCanvas = function(){
                             outline));
             }
             if (modeShape === ShapeMode.Ellipse){
-                previewVertices.push([mouseX, mouseY]);
+                previewVertices.push([X, Y]);
                 layers[selectedLayer].shapeList.push(
                     new ELL(previewVertices, 
                             palette[selectedSwatch], 
@@ -987,7 +1009,7 @@ var clickCanvas = function(){
                            outline));
             }
             if (modeShape === ShapeMode.Line){
-                previewVertices.push([mouseX, mouseY]);
+                previewVertices.push([X, Y]);
                 layers[selectedLayer].shapeList.push(
                     new LIN(previewVertices, 
                             palette[selectedSwatch]
@@ -1044,7 +1066,29 @@ var drawBorder = function(){
     fill(201, 156, 100);
     rect(0, -50, width, 100, 17);
 };
+var drawGrid = function(){
+    var gridOffset = (round(50/gridSize))*gridSize - gridSize;
+    for (var i = gridOffset; i < 350; i += gridSize){
+        if (i > 200 - gridSize && 
+            i < 200 + gridSize){
+                strokeWeight(2);
+                stroke(199, 115, 115, 100);
+        }
+        else {
+                strokeWeight(1);
+                stroke(0, 0, 0, 50);
+        }
+        
+        line(i, 0,
+             i, 400);
+        line(0 , i, 
+             400, i);
+    }
+};
 var drawPreview = function(){
+    var X = roundIfGridSnap("X");
+    var Y = roundIfGridSnap("Y");
+    
     if (palette[selectedSwatch] === 0){noFill();}
     else{fill(palette[selectedSwatch]);}
     if (modeShape === ShapeMode.Poly) {
@@ -1058,7 +1102,7 @@ var drawPreview = function(){
         for (var r in previewVertices) {
             vertex(previewVertices[r][0], previewVertices[r][1]);
         }
-        vertex(mouseX, mouseY);
+        vertex(X, Y);
         endShape(CLOSE);
     }
     if (modeShape === ShapeMode.Ellipse) {
@@ -1068,13 +1112,13 @@ var drawPreview = function(){
         else {noStroke();}
         ellipseMode(CENTER);
         if (previewVertices.length === 0){
-            ellipse(mouseX,mouseY,2,2);
+            ellipse(X,Y,2,2);
         }
         else {
             ellipse (previewVertices[0][0],
                      previewVertices[0][1], 
-                     abs(mouseX - previewVertices[0][0]) * 2, 
-                     abs(mouseY - previewVertices[0][1]) * 2);
+                     abs(X - previewVertices[0][0]) * 2, 
+                     abs(Y - previewVertices[0][1]) * 2);
         }
     }
     if (modeShape === ShapeMode.Line){
@@ -1083,11 +1127,11 @@ var drawPreview = function(){
             stroke(palette[selectedSwatch]);
             strokeWeight(1);}
         if (previewVertices.length === 0){
-            point(mouseX, mouseY);
+            point(X, Y);
         }
         else {
             line(previewVertices[0][0], previewVertices[0][1],
-                 mouseX, mouseY);
+                 X, Y);
         }
     }    
 };
@@ -1101,6 +1145,33 @@ var drawShapes = function(){
             }
         }
     }
+};
+var drawCoords = function(){
+    var X = roundIfGridSnap("X");
+    var Y = roundIfGridSnap("Y");
+
+    //draw crosshair
+    stroke(palette[selectedSwatch], 200);
+    line(X, Y+5, X, Y-5);
+    line(X+5, Y, X-5, Y);
+    
+    fill(0, 0, 0);
+    var coords = "(" + X + ", " + Y + ")";
+    textAlign(LEFT);
+    
+    //Adjust position of text if too close to edge
+    if (X > 280){
+        textAlign(RIGHT);
+    }
+    else if (X < 50){
+        textAlign(LEFT);
+    }
+    if (Y < 75){
+        Y += 30;
+    }
+    Y = constrain(Y, 80, 349);
+    X = constrain(X, 50, 330);
+    text(coords, X + 10, Y - 10);
 };
 var drawBottomMenu = function(){
     if (modeMenuBottom === MenuBottomType.Default) {
@@ -1176,6 +1247,15 @@ var drawLayersUI = function(){
         fill(0, 0, 0);
         text(layers.length - i, 375, 75 + (i * 26));
     }
+};
+var drawGridScale = function(){
+    rectMode(CORNER);
+    colorMode(RGB);
+    fill(255, 255, 255);
+    rect(10,75,30,30,5);
+    fill(0, 0, 0);
+    textAlign(CENTER, CENTER);
+    text(gridSize,25,90);
 };
 
 //DRAW functions for COLOR PICKER scene\\
@@ -1366,9 +1446,18 @@ draw = function () {
         stroke(0, 0, 0);
         strokeWeight(1);
         
+        if (displayGrid === 1){
+            drawGrid();
+        }
+        
         drawShapes();
         
         if (modeShape !== ShapeMode.none && scene !== SceneType.Eyedropper){drawPreview();}
+        
+        
+        if (displayCoords === 1){
+            drawCoords();
+        }
         
         drawBorder();
         
@@ -1383,6 +1472,10 @@ draw = function () {
         strokeButton.draw();
         
         eyedropperButton.draw();
+        
+        if (displayGrid === 1){
+            drawGridScale();
+        }
     }
     
     if(scene === SceneType.Eyedropper && mouseX < 350 && mouseX > 50 && mouseY < 350 && mouseY > 52) {
@@ -1410,31 +1503,45 @@ draw = function () {
         noStroke();
         rect(0,0,width,height);
         
+        //Information title
         textAlign(CENTER);
         fill(255, 255, 255);
         textSize(50);
         text("Information", 200,50);
         
+        //Hotkey header
         textSize(30);
-        text("Hotkeys",70,280);
+        text("Hotkeys",70,205);
         
+        //Hotkey text
         textAlign(LEFT);
         textSize(20);
-        text("z = Undo", 25, 310);
-        text("e = Export", 25, 335);
+        text("z =   Undo",               25, 230);
+        text("e =   Export",             25, 255);
+        text("m =  Recenter",            25, 280);
+        text("ctrl = Show mouse coords", 25, 330);
         
+        text("g =       Toggle grid",   200, 230);
+        text("shift =   Snap to Grid",  200, 255);
+        text("up/down = scale grid",    200, 280);
+        
+        
+        //Instructions header
         textAlign(CENTER);
         textSize(30);
         text("Instructions", 90, 100);
+        
+        //Instructions text
         textSize(20);
         textAlign(LEFT);
-        text("Select a shape and left-click on the canvas to draw it. Right-click to finish a shape",15,115,250, 300);
+        text("Select a shape and left-click on the canvas to draw it. Right-click to finish a shape",15,115,410, 300);
         
         backButton.draw();
     }
 };
 
 mouseMoved = function () {
+    
     if (scene === SceneType.ColorPickerActive) {
         if (mouseX >= 75 && mouseX <= 330 && mouseY >= 75 && mouseY <= 330) {
             stroke(0, 0, (colorPickerBrightness + 125) % 255);
@@ -1453,11 +1560,12 @@ keyPressed = function () {
     actionHistory.pop();
     }
     
+    // e (export)
     if (keyCode === 69){
         exportPicture();
     }
     
-    // m
+    // m (recenter)
     if (keyCode === 77){
         for (var i in layers) {
             for (var s in layers[i].shapeList) {
@@ -1471,10 +1579,27 @@ keyPressed = function () {
         }
     }
     
+    // g (display grid)
+    if (keyCode === 71){
+        displayGrid ^= 1;
+    }
+
+    // up (increase grid size)
+    if (keyCode === 38){
+        gridSize++;
+    }
+    
+    if (keyCode === 40){
+        gridSize--;
+    }
+    
+    // shift (gridsnap)
     if (keyCode === 16){
-        
+        gridSnap ^= 1;
+    }
+    
+    //ctrl (coords)
+    if (keyCode === 17){
+        displayCoords ^= 1;
     }
 };
-
-
-
