@@ -878,14 +878,19 @@ var startButton = new Button ({
    SHAPE OBJECTS
 ******************/
 
-//Polygons\\
-var POLY = function (vertices, fillColor, outlineColor, outline) {
+// Base type that polygons, ellipses, and lines inherit from
+function Shape(vertices, fillColor, outlineColor, outline) {
     this.vertices = vertices;
     this.fillColor = fillColor;
     this.outlineColor = outlineColor;
     this.outline = outline;
+}
+
+//Polygons\\
+var POLY = function (vertices, fillColor, outlineColor, outline) {
+   Shape.call(this,vertices, fillColor, outlineColor, outline);
 };
-POLY.prototype.draw = function (vertices, fillColor, outlineColor, outline) {
+POLY.prototype.draw = function () {
     stroke(this.outlineColor);
     if (this.fillColor === 0){noFill();}
     else{fill(this.fillColor);}
@@ -900,12 +905,9 @@ POLY.prototype.draw = function (vertices, fillColor, outlineColor, outline) {
 
 //Ellipses\\
 var ELL = function (vertices, fillColor, outlineColor, outline) {
-    this.vertices = vertices;
-    this.fillColor = fillColor;
-    this.outlineColor = outlineColor;
-    this.outline = outline;
+    Shape.call(this,vertices, fillColor, outlineColor, outline);
 };
-ELL.prototype.draw = function  (vertices, fillColor, outlineColor, outline) {
+ELL.prototype.draw = function () {
     stroke(this.outlineColor);
     if (this.fillColor === 0){noFill();}
     else{fill(this.fillColor);}
@@ -918,9 +920,8 @@ ELL.prototype.draw = function  (vertices, fillColor, outlineColor, outline) {
 }; //ell draw method
 
 //Lines\\
-var LIN = function (vertices, color){
-    this.vertices = vertices;
-    this.color = color;
+var LIN = function (vertices, fillColor, outlineColor, outline){
+    Shape.call(this,vertices, fillColor, outlineColor, outline);
 };
 LIN.prototype.draw = function() {
     stroke(this.color);
@@ -1446,14 +1447,14 @@ draw = function () {
         stroke(0, 0, 0);
         strokeWeight(1);
         
-        if (displayGrid === 1){
-            drawGrid();
-        }
         
         drawShapes();
         
         if (modeShape !== ShapeMode.none && scene !== SceneType.Eyedropper){drawPreview();}
         
+        if (displayGrid === 1){
+            drawGrid();
+        }
         
         if (displayCoords === 1){
             drawCoords();
