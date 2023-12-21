@@ -580,23 +580,23 @@ colorMode(HSB);
    VARIABLES
 ***************/
 
-var gridSnap = 0;
-var displayGrid = 0;
-var displayCoords = 0;
+var gridSnap = 0; //whether gridSnap is on or not
+var displayGrid = 0; //whether the grid should be displayed or not
+var displayCoords = 0; //whether the mouse coords should be displayed
 
-var gridSize = 20;
+var gridSize = 20; //how large the grid squares are
 
-var actionHistory = [];
+var actionHistory = []; //an array for all of the actions made
 
-var colorPickerBrightness = 255;
+var colorPickerBrightness = 255; //how bright the color picker is
 
 var ShapeMode = {
     None: 0,
     Poly: 1,
     Ellipse: 3,
     Line: 4
-};
-var modeShape = ShapeMode.None;
+}; //used to give human-friendly names to shape modes w/o using strings
+var modeShape = ShapeMode.None; //default shape mode is none
 
 var SceneType = {
     Drawing: 0,
@@ -605,20 +605,23 @@ var SceneType = {
     Eyedropper: 3,
     InfoScreen: 4,
     SplashScreen: 5
-};
-var scene = SceneType.SplashScreen;
+}; //scene type list
+var scene = SceneType.SplashScreen; //default scene is splash screen
 
-var MenuBottomType = {
+//we were debating whether to have different "pages" for the bottom menu
+var MenuBottomType = { 
     Default: 0
 };
 var modeMenuBottom = MenuBottomType.Default;
 
-var brushColor = color(0, 0, 255);
+var brushColor = color(0, 0, 255); //the fill color is white by default
 
-var outline = true;
+var outline = true; //outline/stroke is on by default
 
-var previewVertices = [];
+//this array is used to remember which points have been clicked when drawing the shape preview
+var previewVertices = []; 
 
+//an array of objects that contain an array of all the shape objects on that layer, and then an attribute of whether the layer is hidden or not
 var layers = [
     {
         shapeList: [],
@@ -643,6 +646,7 @@ var layers = [
 ];
 var selectedLayer = 4;
 
+//an array of colors that will be displayed in the palette
 var palette = [
     color(0, 255, 255),     //red       0-15
     color(25, 255, 255),    //orange    20-35
@@ -657,14 +661,14 @@ var palette = [
     color(255, 0, 255),     //white
     0];                     //transparent (keep at the end plz)
 
-var shapeList = [];
-
+//the index of the selected swatch
 var selectedSwatch = 0;
 
 //constants for cleanliness\\
-var bottomButtonHeight = 400 - 14;
+var bottomButtonHeight = 400 - 14; // how high all of the bottom buttons are
 var paletteRightEdge = 390; //right edge of palette
-var paletteLeftEdge = paletteRightEdge - (21 * ceil(palette.length / 2));
+//the left side of the palette, based on how many swatches there are
+var paletteLeftEdge = paletteRightEdge - (21 * ceil(palette.length / 2)); 
 
 /****************
  BUTTON OBJECTS
@@ -722,7 +726,7 @@ Button.prototype.reactToClick = function () {
     this.isClicked^=1;
 };
 
-//Buttom bottons\\
+//Bottom bottons\\
 var polyButton = new Button({
     x: 51, y: bottomButtonHeight,
     width: 100, height: 62,
@@ -734,7 +738,7 @@ var polyButton = new Button({
     onClick: function () {
         if (modeShape !== ShapeMode.Poly) {
             modeShape = ShapeMode.Poly;
-            previewVertices = [];
+            previewVertices = []; //clears points
         }
         else {
             modeShape = ShapeMode.None;
@@ -780,14 +784,15 @@ var lineButton = new Button({
         }
     }
 });
-var resetShapeButtons = function (clickedButton) {
-    if (clickedButton !== polyButton && polyButton.isClicked) {
+//hitting one button will "unclick" all other buttons
+var resetShapeButtons = function () {
+    if (polyButton.isClicked) {
         polyButton.reactToClick();
     }
-    if (clickedButton !== ellButton && ellButton.isClicked) {
+    if (ellButton.isClicked) {
         ellButton.reactToClick();
     }
-    if (clickedButton !== lineButton && lineButton.isClicked) {
+    if (lineButton.isClicked) {
         lineButton.reactToClick();
     }
 };
@@ -892,10 +897,10 @@ var POLY = function (vertices, fillColor, outlineColor, outline) {
 };
 POLY.prototype.draw = function () {
     stroke(this.outlineColor);
-    if (this.fillColor === 0){noFill();}
+    if (this.fillColor === 0){noFill();} //if transparent, noFill
     else{fill(this.fillColor);}
-    if (this.outline){strokeWeight(1);}
-    else {noStroke();}
+    if (this.outline){strokeWeight(1);} 
+    else {noStroke();}                   //if no outline, noStroke
     beginShape();
     for (var q in this.vertices) {
         vertex(this.vertices[q][0], this.vertices[q][1]);
@@ -921,22 +926,23 @@ ELL.prototype.draw = function () {
 
 //Lines\\
 var LIN = function (vertices, fillColor, outlineColor, outline){
-    Shape.call(this,vertices, fillColor, outlineColor, outline);
-};
+    Shape.call(this,vertices, fillColor, outlineColor, outline);};
 LIN.prototype.draw = function() {
-    stroke(this.color);
+    stroke(this.fillColor);
     line(this.vertices[0][0], this.vertices[0][1], this.vertices[1][0], this.vertices[1][1]);
-};
+}; //line draw method
 
+//We were leaving room for other kinds of actions, but for rn, it's just adding shapes
 var HistoryEntryType = {
     AddShape: 0
 };
+
 //HistoryEntry\\
 var HistoryEntry = function (type, layer, index){
-    this.type = type;
-    this.layer = layer;
-    this.index = index;
-};
+    this.type = type; //what type of action (add)
+    this.layer = layer; //which layer
+    this.index = index; //which shape was added
+}; 
 
 
 /****************************
@@ -944,10 +950,14 @@ var HistoryEntry = function (type, layer, index){
 *****************************/
 
 //Math\\
+//rounds the mouse coords to the nearest grid point (based on gridSize)
 var roundIfGridSnap = function(coord){
     var output = 0;
     if (coord === "X"){
+        //divides mouseX by gridSize, rounds, then multiplies by gridSize
+        //Then multiplies by gridSnap, such that if it's off, it'll move the cursor 0px
         var dist = ((round(mouseX/gridSize))*gridSize - mouseX) * gridSnap; 
+        //moves the cursor's x by the distance calcualted above
         output = mouseX + dist;
     }
     else {
@@ -972,14 +982,18 @@ var clickCanvas = function(){
     if (mouseButton === LEFT){
         var X = roundIfGridSnap("X");
         var Y = roundIfGridSnap("Y");
-        
+         
         if(scene === SceneType.Eyedropper) {
+            //sets the selected swatch to the color that's being hovered over
             palette[selectedSwatch] = (get(mouseX, mouseY));
+            //unclicks the eyedropper button
             eyedropperButton.reactToClick();
+            //sets it back to the normal drawing scene
             scene = SceneType.Drawing;
             return;
         }
         
+        //add another vertex to the shape being drawn
         if (modeShape === ShapeMode.Poly) {
             previewVertices.push([X, Y]);
         }
@@ -993,30 +1007,32 @@ var clickCanvas = function(){
     else if (mouseButton === RIGHT){
         var X = roundIfGridSnap("X");
         var Y = roundIfGridSnap("Y");
-        if (previewVertices.length > 0) {
-            if (modeShape === ShapeMode.Poly){
-                layers[selectedLayer].shapeList.push(
+        
+        //Making a previewed shape permanent
+        if (previewVertices.length > 0) { // if a shape is being drawn...
+            if (modeShape === ShapeMode.Poly){// if drawing a polygon...
+                layers[selectedLayer].shapeList.push(//add polygon to this layer's shapelist
                     new POLY(previewVertices, 
                              palette[selectedSwatch], 
                              color(0, 0, 0), 
                             outline));
             }
-            if (modeShape === ShapeMode.Ellipse){
+            if (modeShape === ShapeMode.Ellipse){// if drawing an ellipse...
                 previewVertices.push([X, Y]);
-                layers[selectedLayer].shapeList.push(
+                layers[selectedLayer].shapeList.push(//add ellipse to this layer's shapelist
                     new ELL(previewVertices, 
                             palette[selectedSwatch], 
                             color(0, 0, 0),
                            outline));
             }
-            if (modeShape === ShapeMode.Line){
+            if (modeShape === ShapeMode.Line){// if drawing a line...
                 previewVertices.push([X, Y]);
-                layers[selectedLayer].shapeList.push(
+                layers[selectedLayer].shapeList.push(//add a line to this layer's shapelist
                     new LIN(previewVertices, 
                             palette[selectedSwatch]
                             ));      
             }
-            actionHistory.push(new HistoryEntry(
+            actionHistory.push(new HistoryEntry(//add this shape to the action history
                 HistoryEntryType.AddShape,
                 selectedLayer,
                 layers[selectedLayer].shapeList.length - 1
@@ -1026,6 +1042,29 @@ var clickCanvas = function(){
     }
 };
 var clickPalette = function(){
+    /*
+    Instead of loops of if-statements, the selected swatch is derived through a giant one
+    -liner of math. Lemme walk you through it:
+        A. The mouseX is subtracted from the x-coord of the right-edge of the palette, 
+        to derive the number of pixels left of the right-edge of the palette
+       
+        B. The x-coord of the left edge of the palette is subtracted from the x-coord of the
+        right-edge of the palette to get the full length of the palette in pixels
+        
+        C. A is divided by B to get how far across the palette the mouse is, where 1 is the
+        left edge and 0 is the right edge.
+        
+        D. The number of swatches is divded by 2 and cieling'd to get the number of swatches
+        that make up the top row.
+        
+        E. C is multiplied by D so that it ranges from the index of the right-most swatch on
+        the top row, and 0. For example, if there are 12 swatches, E can be between 5 and 0
+        
+        F. The whole thing is floored, since indices need to be whole numbers.
+        
+        G. If the mouse is on the 2nd row, add the number of swatches on the top row to get 
+        the correct index. (If there are 12 swatches, 6 will be added to E to make it 6-11)
+    */
     if (mouseY < 25) /* top row */ {
         selectedSwatch = (floor(((paletteRightEdge - mouseX) / (paletteRightEdge - paletteLeftEdge)) * ceil(palette.length / 2)));
     } else{ /* bottom row */
@@ -1040,6 +1079,12 @@ var clickPalette = function(){
 };
 var clickLayers = function(){
     //top = 62
+    /*
+    Similar math to the palette, but it does not adapt if we were to add more layers:
+    A. 64 is subtracted from mouseY to get the number of pixels away from the top of the UI
+    B. A is divided by 25 since the buttons are 25px tall. B ranges from 0-4
+    C. B is floored to get the proper index
+    */
     if (mouseButton === LEFT)   {selectedLayer = floor((mouseY - 64)/25);}
     if (mouseButton === RIGHT)  {layers[floor((mouseY - 64)/25)].hidden ^= 1;}
 };
@@ -1068,8 +1113,16 @@ var drawBorder = function(){
     rect(0, -50, width, 100, 17);
 };
 var drawGrid = function(){
+    /*
+        the left and upper most lines are not in the same spot at every gridSize
+        A. 50 is rounded to the nearest x (where x is gridSize) as done above
+        B. This is one grid square too far in, so 1 gridSize is subtracted
+    */
     var gridOffset = (round(50/gridSize))*gridSize - gridSize;
+    
+    //Typical for loop for drawing each gridline. Nothing revolutionary here.
     for (var i = gridOffset; i < 350; i += gridSize){
+        //center line(s) are darker and bolder
         if (i > 200 - gridSize && 
             i < 200 + gridSize){
                 strokeWeight(2);
@@ -1090,31 +1143,41 @@ var drawPreview = function(){
     var X = roundIfGridSnap("X");
     var Y = roundIfGridSnap("Y");
     
+    //if the fill color is transparent, the shape should be transparent
     if (palette[selectedSwatch] === 0){noFill();}
+    //otherwise, fill with the selected color
     else{fill(palette[selectedSwatch]);}
-    if (modeShape === ShapeMode.Poly) {
-        if (outline){strokeWeight(1);}
-        else if (previewVertices.length <= 1) {
+    if (modeShape === ShapeMode.Poly) {//if you're drawing a polygon...
+        if (outline){strokeWeight(1);} //add stroke if enabled
+        /*if you've picked 0 or 1 vertices, an outline of the fillColor is added so that
+          your polygon is visible*/
+        else if (previewVertices.length <= 1) { 
         strokeWeight(1);
         stroke(palette[selectedSwatch]);
     }
+    //otherwise have no outline
     else {noStroke();}
         beginShape();
+        //draw as many vertices as there are in the previewVertices array
         for (var r in previewVertices) {
             vertex(previewVertices[r][0], previewVertices[r][1]);
         }
-        vertex(X, Y);
+        vertex(X, Y); //and then one more for the current mouse coords
         endShape(CLOSE);
     }
-    if (modeShape === ShapeMode.Ellipse) {
+    if (modeShape === ShapeMode.Ellipse) {//if you're drawing an ellipse...
+        //add an outline if enables
         if (outline){
             stroke(0, 0, 0);
             strokeWeight(1);}
         else {noStroke();}
         ellipseMode(CENTER);
+        //if you haven't picked a center-point yet, use a small circle as a preview
         if (previewVertices.length === 0){
             ellipse(X,Y,2,2);
         }
+        /*otherwise draw a circle about the center-point you chose, and then set the width
+        based on how far away the mouse is*/
         else {
             ellipse (previewVertices[0][0],
                      previewVertices[0][1], 
@@ -1123,10 +1186,13 @@ var drawPreview = function(){
         }
     }
     if (modeShape === ShapeMode.Line){
+        //make the line transparent if your selected the transparent color
         if (palette[selectedSwatch] === 0){noStroke();}
+        //otherwise, set the line to be the color you've selected
         else{
             stroke(palette[selectedSwatch]);
             strokeWeight(1);}
+        //if you've not selected a 1st point yet, preview it as a point of the right color
         if (previewVertices.length === 0){
             point(X, Y);
         }
@@ -1139,8 +1205,11 @@ var drawPreview = function(){
 var drawShapes = function(){
     colorMode(HSB);
     fill(palette[selectedSwatch]);
+    //loop through each layer
     for (var l in layers) {
+        //if the layer is hidden, don't draw it
         if (!layers[l].hidden) {
+            //run the .draw method for each shape in the layer
             for (var shape in layers[l].shapeList) {
                 layers[l].shapeList[shape].draw();
             }
@@ -1185,9 +1254,11 @@ var drawBottomMenu = function(){
 };
 var drawSelectedSwatch = function(){
     rectMode(CENTER);
+    //set the swatch to be the appropriate color
     if (palette[selectedSwatch] !== 0){
         fill(palette[selectedSwatch]);
     }
+    //if it's the final swatch, make it the transparent swatch
     else {
         noStroke();
         fill(0,0,200); //light grey
@@ -1204,15 +1275,36 @@ var drawSelectedSwatch = function(){
 };
 var drawPalette = function(){
     rectMode(CENTER);
+    /*
+    Okay, here's a bunch more math, but it makes it so that the palette adjusts when you add
+    or subtract swatches. 
+    
+    A. 380 is the right side of the palette
+    B. Each swatch is 21px, so (21 * l) would be the x value if the palette was only one row
+    C. ceil(palette.length / 2) is the number of swatches in the top row
+    D. Mulitiplying C by 21px gives the length of the top row
+    E. (l / (palette.length / 2)) will return 0.00 - 0.49 for the first half of swatches, 
+       and 0.50 - 1.00 for the 2nd half
+    F. D is floored to return 0 if the swatch is in the top row, and 1 if in the bottom
+    G. D * F moves the swatch to the right if it's in the 2nd half of the swatches
+    
+    In summation, A - B lines all of the swatches up in a row, 
+       and adding D * F moves the swatches back if they're in the 2nd half of the swatches
+       
+    An extra 21 is added to the y-coord if F is 1 (ie the swatch is in the 2nd half)
+    */
+    
     for (var l in palette) {
       if (palette[l] !== 0){fill(palette[l]);}
       else{fill(0,0,200);}
       rect(
-        380 - (21 * l) + (21 * ceil(palette.length / 2)) * floor((l) / (palette.length / 2)),
+        380 - (21 * l) + (21 * ceil(palette.length / 2)) * floor(l / (palette.length / 2)),
         15 + 21 * floor((l) / (palette.length / 2)),
         20, 
         20);
     }
+    
+    //drawing the transparent swatch at the end
     fill(255, 0, 255);
     noStroke();
     rectMode(CORNER);
@@ -1252,8 +1344,10 @@ var drawLayersUI = function(){
 var drawGridScale = function(){
     rectMode(CORNER);
     colorMode(RGB);
+    //background
     fill(255, 255, 255);
     rect(10,75,30,30,5);
+    //text
     fill(0, 0, 0);
     textAlign(CENTER, CENTER);
     text(gridSize,25,90);
@@ -1284,6 +1378,7 @@ var initializeColorPicker = function(){
         stroke(0, 0, 0);
 };
 var drawVignette = function(){
+    //draws a translucent black rectangle over everything
     strokeWeight(2);
     stroke(0, 0, 0);
     rect(75, 25, 256, 26);
@@ -1315,30 +1410,46 @@ var exportPicture = function() {
     var result = "";
     var indent = "    ";
     
+    //Definition draw function
     result += "var " + "myDrawing" + " = function(x, y, size){";
+    //Set proportion variable
     result += "\n" + indent + "var p = 100/size;";
+    //Set the color mode to HSB
     result += "\n\n" + indent + "colorMode(HSB);";
+    //Set the ellipseMode to center
     result += "\n" + indent + "ellipseMode(CENTER);";
     for (var i in layers){ //for every layer
         result  += "\n" + "\n" + indent + "//layer " + i;
         for (var j in layers[i].shapeList){ //for every shape
+                //the code below adds the code that'd be necessary to draw each shape
                 if (layers[i].shapeList[j].outline){result += "\n" + indent + "strokeWeight(1);";}
                 else {result += "\n" + indent + "noStroke();";}
                 if (layers[i].shapeList[j] instanceof POLY){
-                        if (layers[i].shapeList[j].fillColor === 0){result += "\n" + indent + "noFill();";}
+                        if (layers[i].shapeList[j].fillColor === 0)
+                            {result += "\n" + indent + "noFill();";}
                         else {
-                            result += "\n" + indent + "fill(" + round(hue(layers[i].shapeList[j].fillColor)) + ", " + round(saturation(layers[i].shapeList[j].fillColor)) + ", " + round(brightness(layers[i].shapeList[j].fillColor)) + ");";
+                            result += "\n" + indent + "fill(" + 
+                                round(hue(layers[i].shapeList[j].fillColor)) + ", " + 
+                                round(saturation(layers[i].shapeList[j].fillColor)) + ", " +                                 round(brightness(layers[i].shapeList[j].fillColor)) + ");";
                         }
                         result += "\n" + indent + "beginShape();";
                         for (var k in layers[i].shapeList[j].vertices){
-                        result += "\n" + indent + "vertex(" + px(layers[i].shapeList[j].vertices[k][0]) + " / p" + " + x" + ", " + py(layers[i].shapeList[j].vertices[k][1]) + " / p" + " + y" + ");";
+                        result += "\n" + indent + "vertex(" + 
+                                        px(layers[i].shapeList[j].vertices[k][0]) + 
+                                            " / p" + " + x" + ", " + 
+                                        py(layers[i].shapeList[j].vertices[k][1]) + 
+                                            " / p" + " + y" + ");";
                         }
                     result += "\n" + indent + "endShape(CLOSE);\n";
                 }
                 if (layers[i].shapeList[j] instanceof ELL){
-                    if (layers[i].shapeList[j].fillColor === 0){result += "\n" + indent + "noFill();";}
+                    if (layers[i].shapeList[j].fillColor === 0)
+                        {result += "\n" + indent + "noFill();";}
                         else {
-                            result += "\n" + indent + "fill(" + round(hue(layers[i].shapeList[j].fillColor)) + ", " + round(saturation(layers[i].shapeList[j].fillColor)) + ", " + round(brightness(layers[i].shapeList[j].fillColor)) + ");";
+                            result += "\n" + indent + "fill(" + 
+                                round(hue(layers[i].shapeList[j].fillColor)) + ", " + 
+                                round(saturation(layers[i].shapeList[j].fillColor)) + ", " +
+                                round(brightness(layers[i].shapeList[j].fillColor)) + ");";
                         }
 
                 result += "\n" + indent + "ellipse(" + 
@@ -1350,7 +1461,7 @@ var exportPicture = function() {
                     layers[i].shapeList[j].vertices[0][1]) + " * 2" + " / p" + ");";
             }
                 if (layers[i].shapeList[j] instanceof LIN){
-                result += "\n" + indent + "stroke(" + round(hue(layers[i].shapeList[j].color)) + ", " + round(saturation(layers[i].shapeList[j].color)) + ", " + round(brightness(layers[i].shapeList[j].color)) + ");";
+                result += "\n" + indent + "stroke(" + round(hue(layers[i].shapeList[j].fillColor)) + ", " + round(saturation(layers[i].shapeList[j].fillColor)) + ", " + round(brightness(layers[i].shapeList[j].fillColor)) + ");";
                     result += "\n" + indent + "line(" + 
                     px(layers[i].shapeList[j].vertices[0][0]) + " / p + x" + ", " + 
                     py(layers[i].shapeList[j].vertices[0][1]) + " / p + y" + ", " + 
@@ -1359,10 +1470,14 @@ var exportPicture = function() {
                 }
         }
     }
+    
+    //resets the color and ellipseMode
     result += "\n\ncolorMode(RGB);";
     result += "\nellipseMode(CORNER);";
     result += "\n};";
+    //call the draw function
     result += "\n\n\n" + "myDrawing" + "(200,200,100);";
+    result += "\n\n" + "//Remove AAAAA and X";
     println(result);
 };
 
@@ -1381,7 +1496,7 @@ mouseClicked = function () {
         }
         //If clicking canvas\\
         if (mouseX < 350 && mouseX > 50 && 
-                 mouseY < 350 && mouseY > 52) {
+            mouseY < 350 && mouseY > 52) {
                      clickCanvas();}
         //If clicking palette\\
         if (mouseX < paletteRightEdge   && mouseX > paletteLeftEdge && 
@@ -1435,6 +1550,8 @@ draw = function () {
         fill(0, 0, 0);
         textSize(75);
         text("SHAPES", 200, 50);
+        textSize(20);
+        text("Austin Hernandez & Nathan Feinberg", 200, 100);
         startButton.draw();
         return;
     }
@@ -1446,7 +1563,6 @@ draw = function () {
         background(255, 255, 255);
         stroke(0, 0, 0);
         strokeWeight(1);
-        
         
         drawShapes();
         
@@ -1480,6 +1596,7 @@ draw = function () {
     }
     
     if(scene === SceneType.Eyedropper && mouseX < 350 && mouseX > 50 && mouseY < 350 && mouseY > 52) {
+        //Draw preview color shower thingy
         stroke(0);
         triangle(mouseX + 2, mouseY - 2, 
                  mouseX + 13, mouseY + -33, 
@@ -1498,6 +1615,7 @@ draw = function () {
     }
     
     if (scene === SceneType.InfoScreen){
+        //Background
         rectMode(CORNER);
         colorMode(RGB);
         fill(113, 120, 184);
@@ -1542,8 +1660,8 @@ draw = function () {
 };
 
 mouseMoved = function () {
-    
     if (scene === SceneType.ColorPickerActive) {
+        //Updates the color picker preview
         if (mouseX >= 75 && mouseX <= 330 && mouseY >= 75 && mouseY <= 330) {
             stroke(0, 0, (colorPickerBrightness + 125) % 255);
             strokeWeight(7);
@@ -1554,11 +1672,12 @@ mouseMoved = function () {
 };
 
 keyPressed = function () {
-    if (keyCode === 90 && actionHistory.length > 0){ //z
-    var latestAction = actionHistory.length - 1;
-    
-    layers[actionHistory[latestAction].layer].shapeList.pop();
-    actionHistory.pop();
+    //z (undo)
+    if (keyCode === 90 && actionHistory.length > 0){
+        var latestAction = actionHistory.length - 1;
+        //removes the most recent shape
+        layers[actionHistory[latestAction].layer].shapeList.pop();
+        actionHistory.pop();
     }
     
     // e (export)
@@ -1571,6 +1690,7 @@ keyPressed = function () {
         for (var i in layers) {
             for (var s in layers[i].shapeList) {
                 for (var v in layers[i].shapeList[s].vertices) {
+                    //moves the vertices of every shape such that it's centered on the mouse
                     var diffX = 200 - mouseX;
                     var diffY = 200 - mouseY;
                     layers[i].shapeList[s].vertices[v][0] += diffX;
@@ -1590,6 +1710,7 @@ keyPressed = function () {
         gridSize++;
     }
     
+    //down (decrease grid size)
     if (keyCode === 40){
         gridSize--;
     }
